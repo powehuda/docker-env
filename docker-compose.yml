@@ -1,0 +1,74 @@
+version: "3"
+
+services:
+  php:
+    container_name: dev-php-7
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    volumes:
+      - ./.docker/php.ini:/usr/local/etc/php/php.ini
+      - ./php7/:/var/www/html
+    working_dir: /var/www/html
+    restart: on-failure
+    ports:
+      - 7000:80
+    depends_on:
+      - db_maria
+
+  php5:
+    container_name: dev-php-5
+    build:
+      context: .
+      dockerfile: .docker/php5/Dockerfile
+    volumes:
+      - ./.docker/php.ini:/usr/local/etc/php/php.ini
+      - ./php5/:/var/www/html
+    working_dir: /var/www/html
+    restart: on-failure
+    ports:
+      - 5600:80
+    depends_on:
+      - db_maria
+
+  db_maria:
+    container_name: maria-db-work
+    image: mariadb
+    ports:
+      - 3303:3306
+    volumes:
+      - db_maria:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER = root
+      - MYSQL_PASSWORD = root
+      - MYSQL_DATABASE=roots
+  
+  db-sonar-v3:
+    image: kiasaki/alpine-postgres:9.5
+    container_name: sonar-db-work
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    volumes:
+      - db_sonar:/var/lib/postgresql/data
+
+  sonarqube:
+    container_name: sonarqube-work
+    image: sonarqube:7.7-community
+    links:
+      - php
+      - php5
+      - db-sonar-v3
+    environment:
+    - SONARQUBE_JDBC_USERNAME=sonar
+    - SONARQUBE_JDBC_PASSWORD=sonar
+    - SONARQUBE_JDBC_URL=jdbc:postgresql://db-sonar-v3:5432/sonar
+    ports:
+      - 1310:9000
+      - 1312:9002
+
+volumes:
+  db_sonar:
+  db_maria:
